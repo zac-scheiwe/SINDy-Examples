@@ -56,7 +56,7 @@ def get_weak_model(t, num_steps, dt):
         H_xt=dt/2
     )
 
-    opt = ps.SR3(threshold=0.05, thresholder="l1", max_iter=1000, normalize_columns=True, tol=1e-1)
+    opt = ps.SR3(threshold=0.1, thresholder="l0", max_iter=1000, normalize_columns=True, tol=1e-8)
 
     model = ps.SINDy(feature_library=ode_lib, feature_names=["x","y"], optimizer=opt)
     return(model, opt)
