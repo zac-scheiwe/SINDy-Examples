@@ -9,11 +9,11 @@ def reformat(feature_names):
     new_names += feature_names
     return(new_names)
 
-def print_result(model, solution_name):
+def print_result(model, solution_name, optimizer_name):
     print("Feature library:")
     features = model.feature_library.get_feature_names(solution_name)
     print(reformat(features))
-    print("STLSQ model:")
+    print(f"{optimizer_name} model:")
     model.print()
 
 def lognormal_noisify(u, sd):
