@@ -34,23 +34,6 @@ def comparison_plot(x, sim, main_str):
     plt.title(main_str)
     plt.show()
 
-<<<<<<< HEAD
-def get_weak_model(t, num_steps, dt):
-    ode_lib = ps.WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        spatiotemporal_grid=t,
-        K=num_steps,
-        H_xt=dt/2
-    )
-
-    opt = ps.SR3(threshold=0.1, thresholder="l0", max_iter=1000, normalize_columns=True, tol=1e-8)
-
-    model = ps.SINDy(feature_library=ode_lib, feature_names=["x","y"], optimizer=opt)
-    return(model, opt)
-
-=======
->>>>>>> test
 # %%
 p=[1, 2, 3, 4] # Predator-prey parameters
 t_start = 0
