@@ -24,19 +24,6 @@ def phase_plot(x, main_str):
     plt.title(main_str)
     plt.show()
 
-def get_model():
-    ode_lib = ps.CustomLibrary(
-        library_functions=library_functions,
-        function_names=library_function_names
-    )
-    opt = ps.STLSQ(threshold=0.2)
-    model = ps.SINDy(
-        feature_library = ode_lib,
-        optimizer = opt,
-        feature_names=["x", "y"]
-    )
-    return(model, opt)
-
 def comparison_plot(x, sim, main_str):
     plt.plot(x[0,0], x[0,1], "ro", label="Initial condition", alpha=0.6, markersize=8)
     plt.plot(x[:,0], x[:,1], "b", label="Exact solution", alpha=0.4, linewidth=1)
@@ -46,20 +33,6 @@ def comparison_plot(x, sim, main_str):
     plt.legend()
     plt.title(main_str)
     plt.show()
-
-def get_weak_model(t, num_steps, dt):
-    ode_lib = ps.WeakPDELibrary(
-        library_functions=library_functions,
-        function_names=library_function_names,
-        spatiotemporal_grid=t,
-        K=num_steps,
-        H_xt=dt/2
-    )
-
-    opt = ps.SR3(threshold=0.05, thresholder="l1", max_iter=1000, normalize_columns=True, tol=1e-1)
-
-    model = ps.SINDy(feature_library=ode_lib, feature_names=["x","y"], optimizer=opt)
-    return(model, opt)
 
 # %%
 p=[1, 2, 3, 4] # Predator-prey parameters
@@ -75,6 +48,39 @@ def predator_prey(t, x, p=p):
     return [p[0] * x[0] - p[1] * x[0] * x[1], p[2] * x[0] * x[1] - p[3] * x[1]]
 
 integrator_keywords = {'method':'LSODA', 'atol':1e-10, 'rtol':1e-12}
+
+# %%
+def get_model(threshold):
+    ode_lib = ps.CustomLibrary(
+        library_functions=library_functions,
+        function_names=library_function_names
+    )
+    opt = ps.STLSQ(threshold=threshold)
+    model = ps.SINDy(
+        feature_library = ode_lib,
+        optimizer = opt,
+        feature_names=["x", "y"]
+    )
+    return(model, opt)
+
+
+def get_weak_model(threshold):
+    ode_lib = ps.WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        spatiotemporal_grid=t,
+        K=num_steps,
+        H_xt=dt/2
+    )
+    opt = ps.SR3(
+        threshold=threshold,
+        thresholder="l0",
+        max_iter=1000,
+        normalize_columns=True,
+        tol=1e-1,
+    )
+    model = ps.SINDy(feature_library=ode_lib, feature_names=["x","y"], optimizer=opt)
+    return(model, opt)
 
 # %% [markdown]
 # Clean data, normal SINDy
@@ -93,9 +99,9 @@ time_plot(t, x, title)
 phase_plot(x, title)
 
 # %%
-model, opt = get_model()
+model, opt = get_model(0.2)
 model.fit(x, t=dt)
-model.print()
+print_result(model, ["x", "y"], "STLSQ")
 
 # %%
 x0_test = [1, 1.5]
@@ -119,9 +125,9 @@ time_plot(t, x_noisy, title)
 phase_plot(x_noisy, title)
 
 # %%
-model_noisy, opt_noisy = get_model()
+model_noisy, opt_noisy = get_model(0.2)
 model_noisy.fit(x_noisy, t=dt)
-model_noisy.print()
+print_result(model_noisy, ["x", "y"], "STLSQ")
 
 # %%
 sim_noisy = model_noisy.simulate(x0_test, t=t_test)
@@ -131,9 +137,9 @@ comparison_plot(x_test, sim_noisy, "Model prediction")
 # Clean data, weak SINDy
 
 # %%
-weak_model, weak_opt = get_weak_model(t, num_steps, dt)
+weak_model, weak_opt = get_weak_model(0.2)
 weak_model.fit(x, t=dt)
-print_result(weak_model, ["x", "y"])
+print_result(weak_model, ["x", "y"], "STLSQ")
 
 # %%
 opt.coef_ = weak_opt.coef_
@@ -144,11 +150,12 @@ comparison_plot(x_test, weak_sim, "Model prediction")
 # Noisy data, weak SINDy
 
 # %%
-weak_model_noisy, weak_opt_noisy = get_weak_model(t, num_steps, dt)
+weak_model_noisy, weak_opt_noisy = get_weak_model(0.2)
 weak_model_noisy.fit(x_noisy, t=dt)
-print_result(weak_model_noisy, ["x", "y"])
+print_result(weak_model_noisy, ["x", "y"], "STSLQ")
 
 # %%
 opt_noisy.coef_ = weak_opt_noisy.coef_
 weak_sim_noisy = model_noisy.simulate(x0_test, t=t_test)
 comparison_plot(x_test, weak_sim_noisy, "Model prediction")
+# %%

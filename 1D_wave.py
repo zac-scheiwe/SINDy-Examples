@@ -16,13 +16,15 @@ equation = PDE({solution_name: f"- {a} * d_dx(u) + {b} * laplace(u)"},
 
 x_min = -pi
 x_max = pi
-x_num_elements = 256
+x_num_elements = 32
+dx = (x_max - x_min)/x_num_elements
 
 grid = CartesianGrid([[x_min, x_max]], [x_num_elements], periodic=True)
 state = ScalarField.from_expression(grid, "sin(x)+cos(2*x)")
 
 t_max = pi
-t_num_elements = 256
+t_num_elements = 32
+dt = t_max/t_num_elements
 
 storage = MemoryStorage()
 result = equation.solve(state, t_range=t_max, tracker=storage.tracker(t_max/t_num_elements))
@@ -56,10 +58,14 @@ plot_solution(x, t, u, solution_name)
 plot_derivatives(x, t, u, solution_name)
 
 # %%
-def get_model(threshold):
-    library_functions = [lambda x: x, lambda x: x * x]
-    library_function_names = [lambda x: x, lambda x: x + x]
+X, T = np.meshgrid(x, t, indexing="ij")
+spatiotemporal_grid = np.asarray([X, T])
+spatiotemporal_grid = np.transpose(spatiotemporal_grid, axes=[1,2,0])
+H_xt = [dx/2, dt/2]
+library_functions = [lambda x: x, lambda x: x * x]
+library_function_names = [lambda x: x, lambda x: x + x]
 
+def get_model(threshold):
     pde_lib = ps.PDELibrary(library_functions=library_functions, 
                             function_names=library_function_names, 
                             derivative_order=2, spatial_grid=x, 
@@ -69,22 +75,55 @@ def get_model(threshold):
     model = ps.SINDy(feature_library=pde_lib, optimizer=optimizer, feature_names=solution_name)
     return(model)
 
-# %%
-clean_model = get_model(20)
-u_r = np.transpose(u).reshape(len(x), len(t), 1)
-clean_model.fit(u_r, t=t[1]-t[0])
-print_result(clean_model, solution_name)
+def get_weak_model(threshold, num_domain_centers):
+    pde_lib = ps.WeakPDELibrary(
+        library_functions=library_functions,
+        function_names=library_function_names,
+        derivative_order=2,
+        spatiotemporal_grid=spatiotemporal_grid,
+        K=num_domain_centers,
+        H_xt=H_xt,
+        include_bias=True,
+        is_uniform=False
+    )
 
+    optimizer = ps.SR3(threshold=threshold, thresholder="l0", max_iter=10000, normalize_columns=True, tol=1e-10)
+
+    model = ps.SINDy(feature_library=pde_lib, feature_names=[solution_name], optimizer=optimizer)
+    return(model)
+# %% [markdown]
+# Clean data, normal SINDy
 # %%
-sd = 0.01
+model = get_model(2)
+u_r = np.transpose(u).reshape(len(x), len(t), 1)
+model.fit(u_r, t=dt)
+print_result(model, solution_name, "STLSQ")
+
+# %% [markdown]
+# Noisy data, normal SINDy
+# %%
+sd = 0.1
 u_noisy = noisify(u, 0.1)
 plot_solution(x, t, u_noisy, solution_name)
 plot_derivatives(x, t, u_noisy, solution_name)
 
 # %%
-noisy_model = get_model(20)
-u_noisy_r = np.transpose(u_noisy).reshape(len(x), len(t), 1)
-noisy_model.fit(u_noisy_r, t=t[1]-t[0])
-print_result(noisy_model, solution_name)
+model_noisy = get_model(8)
+u_r_noisy = np.transpose(u_noisy).reshape(len(x), len(t), 1)
+model_noisy.fit(u_r_noisy, t=t[1]-t[0])
+print_result(model_noisy, solution_name, "STLSQ")
 
+# %% [markdown]
+# Clean data, weak SINDy
+# %%
+weak_model = get_weak_model(0.01, 100)
+weak_model.fit(u_r)
+print_result(weak_model, solution_name, "SR3 weak")
 
+# %% [markdown]
+# Noisy data, weak SINDy
+# %%
+weak_model_noisy = get_weak_model(0.01, 100)
+weak_model_noisy.fit(u_r_noisy)
+print_result(weak_model, solution_name, "SR3 weak")
+# %%
