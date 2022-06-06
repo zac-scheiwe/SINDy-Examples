@@ -85,15 +85,15 @@ pde_lib = ps.PDELibrary(library_functions=library_functions,
                         include_bias=True, is_uniform=True
                         )
 
-opt = ps.STLSQ(threshold=1, alpha=1e-5, normalize_columns=True)
-# opt = ps.SR3(threshold=0.1, thresholder="l1", max_iter=1000, normalize_columns=True, tol=1e-1)
+# opt = ps.STLSQ(threshold=1, alpha=1e-5, normalize_columns=True)
+opt = ps.SR3(threshold=0.1, thresholder="l1", max_iter=1000, normalize_columns=True, tol=1e-1)
 model = ps.SINDy(feature_library=pde_lib, optimizer=opt, feature_names='u',
                 #  differentiation_method=ps.SpectralDerivative
                  )
 
 dt = t[1]-t[0]
 model.fit(u_reshaped, t=dt)
-print_result(model, "u")
+print_result(model, "u", "SR3")
 
 # %%
 animate_solution(x, y, u, "u")
