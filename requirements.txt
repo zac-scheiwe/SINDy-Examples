@@ -1,9 +1,0 @@
-cvxpy==1.2.0
-derivative==0.4.2
-hypothesis==6.46.11
-numpy==1.22.3
-pytest==5.4.3
-scikit_learn==1.1.1
-scipy==1.8.0
-setuptools==58.0.4
-Sphinx==5.0.1
