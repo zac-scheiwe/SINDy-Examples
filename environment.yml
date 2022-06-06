@@ -6,5 +6,6 @@ dependencies:
   - jupyter
   - pandas
   - py-pde
-  - jupyter_contrib_nbextensions
+  - pip:
+    - pysindy
 prefix: C:\Users\zacha\anaconda3\envs\sindy
